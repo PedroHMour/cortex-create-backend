@@ -1,68 +1,53 @@
-# render.yaml
-# Este é o plano de construção para a nossa infraestrutura no Render.
+# render.yaml (Versão Corrigida e Profissional)
+# Descreve a infraestrutura usando os tipos de serviço geridos do Render.
 
 services:
-  # 1. O nosso Banco de Dados PostgreSQL
+  # 1. O nosso Banco de Dados PostgreSQL Gerido
   - name: cortex-create-db
-    type: pserv # 'pserv' significa Private Service
-    image:
-      path: postgres:14 # Usamos a imagem oficial do Postgres versão 14
-      username: postgres
-    plan: free # Define o plano gratuito
-    disk:
-      name: postgres_data
-      mountPath: /var/lib/postgresql/data
-      sizeGB: 1
-
-  # 2. O nosso Message Broker Redis
-  - name: cortex-create-redis
-    type: pserv
-    image:
-      path: redis:7 # Usamos a imagem oficial do Redis versão 7
-      username: default
+    type: postgres # CORREÇÃO: Usamos o tipo dedicado 'postgres'
+    postgresMajorVersion: 14 # Especificamos a versão desejada
     plan: free
-    disk:
-      name: redis_data
-      mountPath: /data
-      sizeGB: 1
+
+  # 2. O nosso Message Broker Redis Gerido
+  - name: cortex-create-redis
+    type: redis # CORREÇÃO: Usamos o tipo dedicado 'redis'
+    redisVersion: 7 # Especificamos a versão desejada
+    plan: free
 
   # 3. O nosso Backend (API FastAPI)
   - name: cortex-create-api
-    type: web # 'web' significa um serviço que recebe tráfego HTTP
-    env: docker # Diz ao Render para construir a partir do nosso Dockerfile
+    type: web
+    env: docker
     
-    # Ligações automáticas aos outros serviços
-    # O Render irá criar as variáveis de ambiente DATABASE_URL e REDIS_URL para nós.
     envVars:
       - key: DATABASE_URL
         fromService:
-          type: pserv
+          type: postgres # CORREÇÃO: Apontamos para o tipo correto
           name: cortex-create-db
           property: connectionString
       - key: REDIS_URL
         fromService:
-          type: pserv
+          type: redis # CORREÇÃO: Apontamos para o tipo correto
           name: cortex-create-redis
           property: connectionString
-      - key: REPLICATE_API_TOKEN # Esta teremos de adicionar manualmente
-        sync: false
+      - key: REPLICATE_API_TOKEN
+        sync: false # Mantemos esta configuração para a chave secreta
 
   # 4. O nosso Worker (Celery)
   - name: cortex-create-worker
-    type: worker # 'worker' é um serviço que corre em segundo plano
+    type: worker
     env: docker
     startCommand: celery -A app.worker.celery_app worker --loglevel=info
     
-    # O worker também precisa de acesso à DB e ao Redis
     envVars:
       - key: DATABASE_URL
         fromService:
-          type: pserv
+          type: postgres # CORREÇÃO: Apontamos para o tipo correto
           name: cortex-create-db
           property: connectionString
       - key: REDIS_URL
         fromService:
-          type: pserv
+          type: redis # CORREÇÃO: Apontamos para o tipo correto
           name: cortex-create-redis
           property: connectionString
       - key: REPLICATE_API_TOKEN
