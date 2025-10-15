@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+replicate
+pydantic
+sqlalchemy
+psycopg2-binary  # Driver para PostgreSQL
+celery
+redis
