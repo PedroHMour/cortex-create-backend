@@ -1,53 +1,8 @@
-# render.yaml (Versão 3 - Corrigida de acordo com a documentação oficial do Render Blueprint)
+# render.yaml (Teste Mínimo de Isolamento)
 
-# Declara todos os serviços de banco de dados geridos aqui.
-databases:
-  - name: cortex-create-db # O nome do nosso serviço de banco de dados
-    plan: free            # O plano de subscrição
-
-# Declara todos os serviços Redis geridos aqui.
-redis:
-  - name: cortex-create-redis # O nome do nosso serviço Redis
-    plan: free
-
-# Declara os serviços da nossa aplicação (API e Worker) aqui.
 services:
-  # 1. O nosso Backend (API FastAPI)
-  - name: cortex-create-api
-    type: web # Este é um serviço web, acessível via HTTP
+  - name: cortex-create-api-test
+    type: web
     env: docker
-    # O Render irá construir a partir do Dockerfile na raiz do repositório.
-    envVars:
-      - key: DATABASE_URL
-        fromService:
-          type: postgres # O tipo do serviço ao qual nos estamos a ligar
-          name: cortex-create-db # O nome que definimos no bloco 'databases'
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis # O tipo do serviço ao qual nos estamos a ligar
-          name: cortex-create-redis # O nome que definimos no bloco 'redis'
-          property: connectionString
-      # A nossa chave secreta, que será adicionada manualmente no painel do Render.
-      - key: REPLICATE_API_TOKEN
-        sync: false
-
-  # 2. O nosso Worker (Celery)
-  - name: cortex-create-worker
-    type: worker # Este é um serviço de background, sem URL pública
-    env: docker
-    startCommand: celery -A app.worker.celery_app worker --loglevel=info
-    envVars:
-      # As variáveis de ambiente são idênticas às da API
-      - key: DATABASE_URL
-        fromService:
-          type: postgres
-          name: cortex-create-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: cortex-create-redis
-          property: connectionString
-      - key: REPLICATE_API_TOKEN
-        sync: false
+    # Nota: Removemos todas as envVars por agora.
+    # O build irá passar, mas a aplicação irá falhar ao iniciar, o que é esperado.
