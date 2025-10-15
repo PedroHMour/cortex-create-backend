@@ -1,0 +1,69 @@
+# render.yaml
+# Este é o plano de construção para a nossa infraestrutura no Render.
+
+services:
+  # 1. O nosso Banco de Dados PostgreSQL
+  - name: cortex-create-db
+    type: pserv # 'pserv' significa Private Service
+    image:
+      path: postgres:14 # Usamos a imagem oficial do Postgres versão 14
+      username: postgres
+    plan: free # Define o plano gratuito
+    disk:
+      name: postgres_data
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 1
+
+  # 2. O nosso Message Broker Redis
+  - name: cortex-create-redis
+    type: pserv
+    image:
+      path: redis:7 # Usamos a imagem oficial do Redis versão 7
+      username: default
+    plan: free
+    disk:
+      name: redis_data
+      mountPath: /data
+      sizeGB: 1
+
+  # 3. O nosso Backend (API FastAPI)
+  - name: cortex-create-api
+    type: web # 'web' significa um serviço que recebe tráfego HTTP
+    env: docker # Diz ao Render para construir a partir do nosso Dockerfile
+    
+    # Ligações automáticas aos outros serviços
+    # O Render irá criar as variáveis de ambiente DATABASE_URL e REDIS_URL para nós.
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: cortex-create-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: pserv
+          name: cortex-create-redis
+          property: connectionString
+      - key: REPLICATE_API_TOKEN # Esta teremos de adicionar manualmente
+        sync: false
+
+  # 4. O nosso Worker (Celery)
+  - name: cortex-create-worker
+    type: worker # 'worker' é um serviço que corre em segundo plano
+    env: docker
+    startCommand: celery -A app.worker.celery_app worker --loglevel=info
+    
+    # O worker também precisa de acesso à DB e ao Redis
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: cortex-create-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: pserv
+          name: cortex-create-redis
+          property: connectionString
+      - key: REPLICATE_API_TOKEN
+        sync: false
